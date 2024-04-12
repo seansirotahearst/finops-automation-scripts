@@ -1,0 +1,1583 @@
+Public Const HomePageSheetName As String = "Home Page"
+Public Const PowerBISheetName As String = "Power BI"
+Public Const FlexOrgSheetName As String = "Mappings"
+Public DebugMode As Boolean
+
+Sub AWS_Cost_Summary(Optional ByVal BUName As String, Optional ByVal SwitchSheet As Boolean)
+'
+' AWS_Cost_Summary Macro
+'
+
+'
+    Dim SheetName As String
+    Dim SheetExists As Boolean
+    SheetExists = False
+    If IsMissing(SwitchSheet) = False And SwitchSheet = True Then
+        If IsMissing(BUName) = False Then
+            For Each ws In ThisWorkbook.Worksheets
+                If ws.Name = BUName & " AWS Cost Summary" Then
+                    SheetExists = True
+                    Sheets(BUName & " AWS Cost Summary").Select
+                    Exit For
+                End If
+            Next ws
+            If SheetExists = False Then
+                Sheets("AWS Cost Summary").Visible = True
+                Sheets("AWS Cost Summary").Select
+            End If
+        End If
+        Range("B4").Value = BUName
+        SheetName = ActiveSheet.Name
+    Else
+        Application.ScreenUpdating = False
+        Call Refresh_Data_Connection
+        BUName = Range("B4").Value
+        SheetName = ActiveSheet.Name
+        If SheetName <> "AWS Cost Summary" Then GoTo WrongSheet
+    End If
+    
+    ActiveSheet.ListObjects(1).AutoFilter.ShowAllData
+    If WorksheetFunction.CountA(Range("B6:D6")) <> 0 Then
+        Rows("6:6").Select
+        Selection.Delete Shift:=xlUp
+    End If
+    Rows("7:5000").Select
+    Selection.Delete Shift:=xlUp
+    Range("B6:D5000").Select
+    Selection.ClearContents
+    
+    Sheets(PowerBISheetName).Select
+    With ActiveSheet.PivotTables("Automation Dashboard")
+        .ColumnGrand = False
+        .RowGrand = False
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").RowAxisLayout xlCompactRow
+    ActiveSheet.PivotTables("Automation Dashboard").RepeatAllLabels _
+        xlDoNotRepeatLabels
+    ActiveSheet.PivotTables("Automation Dashboard").ClearTable
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Change Delta].[Services_ServiceItemDescription]")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").AddDataField ActiveSheet. _
+        PivotTables("Automation Dashboard").CubeFields("[Measures].[Prior Month Spend]" _
+        )
+    ActiveSheet.PivotTables("Automation Dashboard").AddDataField ActiveSheet. _
+        PivotTables("Automation Dashboard").CubeFields( _
+        "[Measures].[Current Month Spend]")
+    ActiveSheet.PivotTables("Automation Dashboard").AddDataField ActiveSheet. _
+        PivotTables("Automation Dashboard").CubeFields("[Measures].[Prior Month]")
+    ActiveSheet.PivotTables("Automation Dashboard").AddDataField ActiveSheet. _
+        PivotTables("Automation Dashboard").CubeFields("[Measures].[Current Month]")
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Change Delta].[CloudHealthFlexOrg]")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    
+    On Error GoTo NoBUFound
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = True
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[AWS Change Delta].[CloudHealthFlexOrg].[CloudHealthFlexOrg]").ClearAllFilters
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[AWS Change Delta].[CloudHealthFlexOrg].[CloudHealthFlexOrg]").CurrentPageName = "[AWS Change Delta].[CloudHealthFlexOrg].&[" & BUName & "]"
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = False
+    
+    ActiveSheet.PivotTables("Automation Dashboard").TableRange1.Select
+    Selection.Offset(1, 0).Select
+    Selection.Resize(Selection.Rows.Count - 1, Selection.Columns.Count).Select
+    Selection.Resize(Selection.Rows.Count, Selection.Columns.Count - 2).Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("B6").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Columns("E:E").EntireColumn.AutoFit
+    Application.CutCopyMode = False
+    With ActiveSheet.ListObjects(1).Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=.Parent.ListColumns("Absolute").DataBodyRange, SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    Columns("E:E").Select
+    Selection.EntireColumn.Hidden = True
+    Range("B6:K6").Select
+    Selection.ListObject.ListRows.Add (1)
+    Range("B6").Select
+    ActiveCell.FormulaR1C1 = "Total"
+    Range("C6").Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[1]C:R[4994]C)"
+    Range("D6").Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[1]C:R[4994]C)"
+    Range("B6:K6").Select
+    With Selection.Interior
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = 0
+        .PatternTintAndShade = 0
+    End With
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    With Selection.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    Selection.Borders(xlInsideVertical).LineStyle = xlNone
+    Selection.Borders(xlInsideHorizontal).LineStyle = xlNone
+    Selection.FormatConditions.Delete
+    
+    Sheets(PowerBISheetName).Select
+    Range("D4:E4").Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("C5:D5").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Application.CommandBars(" ").Visible = False
+    
+    Range("B2").Select
+    Selection.Cut
+    Range("A2").Select
+    ActiveSheet.Paste
+    Columns("B:D").Select
+    Columns("B:D").EntireColumn.AutoFit
+    Range("A2").Select
+    Selection.Cut
+    Range("B2").Select
+    ActiveSheet.Paste
+    
+    Range("A1").Select
+Exit Sub
+    
+NoBUFound:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("No cost summary data was found for " & BUName & ".", vbOKOnly)
+    End If
+    Range("A1").Select
+Exit Sub
+
+WrongSheet:
+    If DebugMode = True Then
+        msg = MsgBox("You cannot run the AWS Cost Summary macro in this sheet.", vbOKOnly)
+    End If
+    Range("A1").Select
+End Sub
+
+Sub Azure_Cost_Summary(Optional ByVal BUName As String, Optional ByVal SwitchSheet As Boolean)
+'
+' Azure_Cost_Summary Macro
+'
+
+'
+    Dim SheetName As String
+    Dim SheetExists As Boolean
+    SheetExists = False
+    If IsMissing(SwitchSheet) = False And SwitchSheet = True Then
+        If IsMissing(BUName) = False Then
+            For Each ws In ThisWorkbook.Worksheets
+                If ws.Name = BUName & " Azure Cost Summary" Then
+                    SheetExists = True
+                    Sheets(BUName & " Azure Cost Summary").Select
+                    Exit For
+                End If
+            Next ws
+            If SheetExists = False Then
+                Sheets("Azure Cost Summary").Visible = True
+                Sheets("Azure Cost Summary").Select
+            End If
+        End If
+        Range("B4").Value = BUName
+        SheetName = ActiveSheet.Name
+    Else
+        Application.ScreenUpdating = False
+        Call Refresh_Data_Connection
+        BUName = Range("B4").Value
+        SheetName = ActiveSheet.Name
+        If SheetName <> "Azure Cost Summary" Then GoTo WrongSheet
+    End If
+    
+    ActiveSheet.ListObjects(1).AutoFilter.ShowAllData
+    If WorksheetFunction.CountA(Range("B6:D6")) <> 0 Then
+        Rows("6:6").Select
+        Selection.Delete Shift:=xlUp
+    End If
+    Rows("7:5000").Select
+    Selection.Delete Shift:=xlUp
+    Range("B6:D5000").Select
+    Selection.ClearContents
+    
+    Sheets(PowerBISheetName).Select
+    With ActiveSheet.PivotTables("Automation Dashboard")
+        .ColumnGrand = False
+        .RowGrand = False
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").RowAxisLayout xlCompactRow
+    ActiveSheet.PivotTables("Automation Dashboard").RepeatAllLabels _
+        xlDoNotRepeatLabels
+    ActiveSheet.PivotTables("Automation Dashboard").ClearTable
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Change Delta].[services_itemdescription]")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").AddDataField ActiveSheet. _
+        PivotTables("Automation Dashboard").CubeFields("[Measures].[AzPrior Month Spend]" _
+        )
+    ActiveSheet.PivotTables("Automation Dashboard").AddDataField ActiveSheet. _
+        PivotTables("Automation Dashboard").CubeFields( _
+        "[Measures].[AzCurrent Month Spend]")
+    ActiveSheet.PivotTables("Automation Dashboard").AddDataField ActiveSheet. _
+        PivotTables("Automation Dashboard").CubeFields("[Measures].[AzPrior Month]")
+    ActiveSheet.PivotTables("Automation Dashboard").AddDataField ActiveSheet. _
+        PivotTables("Automation Dashboard").CubeFields("[Measures].[AzCurrent Month]")
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Change Delta].[CloudHealthFlexOrg]")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    
+    On Error GoTo NoBUFound
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = True
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[Azure Change Delta].[CloudHealthFlexOrg].[CloudHealthFlexOrg]").ClearAllFilters
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[Azure Change Delta].[CloudHealthFlexOrg].[CloudHealthFlexOrg]").CurrentPageName = "[Azure Change Delta].[CloudHealthFlexOrg].&[" & BUName & "]"
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = False
+    
+    ActiveSheet.PivotTables("Automation Dashboard").TableRange1.Select
+    Selection.Offset(1, 0).Select
+    Selection.Resize(Selection.Rows.Count - 1, Selection.Columns.Count).Select
+    Selection.Resize(Selection.Rows.Count, Selection.Columns.Count - 2).Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("B6").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Columns("E:E").EntireColumn.AutoFit
+    Application.CutCopyMode = False
+    With ActiveSheet.ListObjects(1).Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=.Parent.ListColumns("Absolute").DataBodyRange, SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    Columns("E:E").Select
+    Selection.EntireColumn.Hidden = True
+    Range("B6:K6").Select
+    Selection.ListObject.ListRows.Add (1)
+    Range("B6").Select
+    ActiveCell.FormulaR1C1 = "Total"
+    Range("C6").Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[1]C:R[4994]C)"
+    Range("D6").Select
+    ActiveCell.FormulaR1C1 = "=SUM(R[1]C:R[4994]C)"
+    Range("B6:K6").Select
+    With Selection.Interior
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = 0
+        .PatternTintAndShade = 0
+    End With
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    With Selection.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlMedium
+    End With
+    Selection.Borders(xlInsideVertical).LineStyle = xlNone
+    Selection.Borders(xlInsideHorizontal).LineStyle = xlNone
+    Selection.FormatConditions.Delete
+    
+    Sheets(PowerBISheetName).Select
+    Range("D4:E4").Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("C5:D5").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Application.CommandBars(" ").Visible = False
+    
+    Range("B2").Select
+    Selection.Cut
+    Range("A2").Select
+    ActiveSheet.Paste
+    Columns("B:D").Select
+    Columns("B:D").EntireColumn.AutoFit
+    Range("A2").Select
+    Selection.Cut
+    Range("B2").Select
+    ActiveSheet.Paste
+    
+    Range("A1").Select
+Exit Sub
+    
+NoBUFound:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("No cost summary data was found for " & BUName & ".", vbOKOnly)
+    End If
+    Range("A1").Select
+Exit Sub
+    
+WrongSheet:
+    If DebugMode = True Then
+        msg = MsgBox("You cannot run the Azure Cost Summary macro in this sheet.", vbOKOnly)
+    End If
+    Range("A1").Select
+End Sub
+
+Sub AWS_Unattached_Volumes(Optional ByVal BUName As String, Optional ByVal SwitchSheet As Boolean)
+'
+' AWS_Unattached_Volumes Macro
+'
+
+'
+    Dim SheetName As String
+    If IsMissing(SwitchSheet) = False And SwitchSheet = True Then
+        Sheets("Unattached Volumes").Select
+        Range("B6").Value = BUName
+    Else
+        Application.ScreenUpdating = False
+        Call Refresh_Data_Connection
+        BUName = Range("B6").Value
+    End If
+    SheetName = ActiveSheet.Name
+    If SheetName <> "Unattached Volumes" Then GoTo WrongSheet
+    
+    ActiveSheet.ListObjects(1).AutoFilter.ShowAllData
+    If Not ActiveSheet.ListObjects(1).DataBodyRange Is Nothing Then
+            ActiveSheet.ListObjects(1).DataBodyRange.Delete
+    End If
+    
+    Sheets(PowerBISheetName).Select
+    ActiveSheet.PivotTables("Automation Dashboard").ClearTable
+    With ActiveSheet.PivotTables("Automation Dashboard")
+        .ColumnGrand = False
+        .RowGrand = False
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").RowAxisLayout xlTabularRow
+    ActiveSheet.PivotTables("Automation Dashboard").RepeatAllLabels xlRepeatLabels
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Account Name]")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Volume Name]")
+        .Orientation = xlRowField
+        .Position = 2
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Volume Id]")
+        .Orientation = xlRowField
+        .Position = 3
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Unattach Date]")
+        .Orientation = xlRowField
+        .Position = 4
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[List Price Per Month]")
+        .Orientation = xlRowField
+        .Position = 5
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Type]")
+        .Orientation = xlRowField
+        .Position = 6
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Size (GB)]")
+        .Orientation = xlRowField
+        .Position = 7
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Tags]")
+        .Orientation = xlRowField
+        .Position = 8
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Attach Date]")
+        .Orientation = xlRowField
+        .Position = 9
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[In Use]")
+        .Orientation = xlRowField
+        .Position = 10
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Product]")
+        .Orientation = xlRowField
+        .Position = 11
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Application]")
+        .Orientation = xlRowField
+        .Position = 12
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Environment]")
+        .Orientation = xlRowField
+        .Position = 13
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[First Discovered]")
+        .Orientation = xlRowField
+        .Position = 14
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Unattached Volumes].[Business Unit]")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    
+    On Error GoTo NoBUFound
+    Range("B1").Select
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = True
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[AWS Unattached Volumes].[Business Unit].[Business Unit]").ClearAllFilters
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[AWS Unattached Volumes].[Business Unit].[Business Unit]").CurrentPageName = "[AWS Unattached Volumes].[Business Unit].&[" & BUName & "]"
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = False
+    
+    ActiveSheet.PivotTables("Automation Dashboard").TableRange1.Select
+    Selection.Offset(1, 0).Select
+    Selection.Resize(Selection.Rows.Count - 1, Selection.Columns.Count).Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("B8").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+
+    Range("E:E").Select
+    Selection.Replace What:=" UTC", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False, FormulaVersion:=xlReplaceFormula2
+    Range("J:J").Select
+    Selection.Replace What:=" UTC", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False, FormulaVersion:=xlReplaceFormula2
+    Range("O:O").Select
+    Selection.Replace What:=" UTC", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False, FormulaVersion:=xlReplaceFormula2
+    
+    Range("C6").Select
+    ActiveCell.FormulaR1C1 = "1"
+    Range("C6").Select
+    Selection.Copy
+    ActiveSheet.ListObjects(1).ListColumns("List Price Per Month").DataBodyRange.Select
+    Selection.PasteSpecial Paste:=xlPasteAll, Operation:=xlMultiply, _
+        SkipBlanks:=False, Transpose:=False
+    ActiveSheet.ListObjects(1).ListColumns("Size (GB)").DataBodyRange.Select
+    Selection.PasteSpecial Paste:=xlPasteAll, Operation:=xlMultiply, _
+        SkipBlanks:=False, Transpose:=False
+    Range("C6").Select
+    Selection.ClearContents
+    
+    Range("B2").Select
+    Selection.Cut
+    Range("A2").Select
+    ActiveSheet.Paste
+    Columns("B:H").Select
+    Columns("B:H").EntireColumn.AutoFit
+    Columns("J:O").Select
+    Columns("J:O").EntireColumn.AutoFit
+    Range("A2").Select
+    Selection.Cut
+    Range("B2").Select
+    ActiveSheet.Paste
+    
+    With ActiveSheet.ListObjects(1).Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=.Parent.ListColumns("List Price Per Month").DataBodyRange, SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    
+    ActiveSheet.ListObjects(1).ListColumns("List Price Per Month").DataBodyRange.Select
+    Selection.FormatConditions.AddColorScale ColorScaleType:=2
+    Selection.FormatConditions(Selection.FormatConditions.Count).SetFirstPriority
+    Selection.FormatConditions(1).ColorScaleCriteria(1).Type = _
+        xlConditionValueLowestValue
+    With Selection.FormatConditions(1).ColorScaleCriteria(1).FormatColor
+        .Color = 16776444
+        .TintAndShade = 0
+    End With
+    Selection.FormatConditions(1).ColorScaleCriteria(2).Type = _
+        xlConditionValueHighestValue
+    With Selection.FormatConditions(1).ColorScaleCriteria(2).FormatColor
+        .Color = 8109667
+        .TintAndShade = 0
+    End With
+    Selection.NumberFormat = "0"
+    
+    Range("A1").Select
+    Exit Sub
+    
+NoBUFound:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("No unattached volumes were found for " & BUName & ".", vbOKOnly)
+    End If
+    Sheets(SheetName).Visible = False
+    Range("A1").Select
+Exit Sub
+    
+WrongSheet:
+    If DebugMode = True Then
+        msg = MsgBox("You cannot run the AWS Unattached Volumes macro in this sheet.", vbOKOnly)
+    End If
+    Range("A1").Select
+End Sub
+
+Sub Azure_Unattached_Disks(Optional ByVal BUName As String, Optional ByVal SwitchSheet As Boolean)
+'
+' Azure_Unattached_Disks Macro
+'
+
+'
+    Dim SheetName As String
+    If IsMissing(SwitchSheet) = False And SwitchSheet = True Then
+        Sheets("Azure Unattached Disks").Select
+        Range("B6").Value = BUName
+    Else
+        Application.ScreenUpdating = False
+        Call Refresh_Data_Connection
+        BUName = Range("B6").Value
+    End If
+    SheetName = ActiveSheet.Name
+    If SheetName <> "Azure Unattached Disks" Then GoTo WrongSheet
+    
+    ActiveSheet.ListObjects(1).AutoFilter.ShowAllData
+    If Not ActiveSheet.ListObjects(1).DataBodyRange Is Nothing Then
+            ActiveSheet.ListObjects(1).DataBodyRange.Delete
+    End If
+    
+    Sheets(PowerBISheetName).Select
+    ActiveSheet.PivotTables("Automation Dashboard").ClearTable
+    With ActiveSheet.PivotTables("Automation Dashboard")
+        .ColumnGrand = False
+        .RowGrand = False
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").RowAxisLayout xlTabularRow
+    ActiveSheet.PivotTables("Automation Dashboard").RepeatAllLabels xlRepeatLabels
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Subscription Name]")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Azure Subscription ID]")
+        .Orientation = xlRowField
+        .Position = 2
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Disk Name]")
+        .Orientation = xlRowField
+        .Position = 3
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Disk Size Gb]")
+        .Orientation = xlRowField
+        .Position = 4
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Disk State]")
+        .Orientation = xlRowField
+        .Position = 5
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Last Date Disk State Changed]")
+        .Orientation = xlRowField
+        .Position = 6
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Application]")
+        .Orientation = xlRowField
+        .Position = 7
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Environment]")
+        .Orientation = xlRowField
+        .Position = 8
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Product]")
+        .Orientation = xlRowField
+        .Position = 9
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[BusinessUnit]")
+        .Orientation = xlRowField
+        .Position = 10
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[CostCenter]")
+        .Orientation = xlRowField
+        .Position = 11
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Is Active?]")
+        .Orientation = xlRowField
+        .Position = 12
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Resource ID]")
+        .Orientation = xlRowField
+        .Position = 13
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[cost]")
+        .Orientation = xlRowField
+        .Position = 14
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure Unattached Disks].[Business Unit]")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    
+    On Error GoTo NoBUFound
+    Range("B1").Select
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = True
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[Azure Unattached Disks].[Business Unit].[Business Unit]").ClearAllFilters
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[Azure Unattached Disks].[Business Unit].[Business Unit]").CurrentPageName = "[Azure Unattached Disks].[Business Unit].&[" & BUName & "]"
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = False
+    
+    ActiveSheet.PivotTables("Automation Dashboard").TableRange1.Select
+    Selection.Offset(1, 0).Select
+    Selection.Resize(Selection.Rows.Count - 1, Selection.Columns.Count).Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("B8").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+
+    Range("P8").Select
+    ActiveCell.FormulaR1C1 = _
+        "=DATEVALUE(TEXT([@[Last Date Disk State Changed]],""MM/DD/YYYY""))"
+    ActiveSheet.ListObjects(1).ListColumns("Column1").DataBodyRange.Select
+    Selection.Copy
+    Range("G8").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Columns("P:P").Select
+    Application.CutCopyMode = False
+    Selection.Delete Shift:=xlToLeft
+    
+    Range("C6").Select
+    ActiveCell.FormulaR1C1 = "1"
+    Range("C6").Select
+    Selection.Copy
+    ActiveSheet.ListObjects(1).ListColumns("Disk Size Gb").DataBodyRange.Select
+    Selection.PasteSpecial Paste:=xlPasteAll, Operation:=xlMultiply, _
+        SkipBlanks:=False, Transpose:=False
+    ActiveSheet.ListObjects(1).ListColumns("Cost").DataBodyRange.Select
+    Selection.PasteSpecial Paste:=xlPasteAll, Operation:=xlMultiply, _
+        SkipBlanks:=False, Transpose:=False
+    Range("C6").Select
+    Selection.ClearContents
+    
+    ActiveSheet.ListObjects(1).ListColumns("Cost").DataBodyRange.Select
+    Selection.NumberFormat = "_($* #,##0_);_($* (#,##0);_($* ""-""_);_(@_)"
+    
+    With ActiveSheet.ListObjects(1).Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=.Parent.ListColumns("Cost").DataBodyRange, SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    
+    ActiveSheet.ListObjects(1).ListColumns("Cost").DataBodyRange.Select
+    Selection.FormatConditions.AddColorScale ColorScaleType:=2
+    Selection.FormatConditions(Selection.FormatConditions.Count).SetFirstPriority
+    Selection.FormatConditions(1).ColorScaleCriteria(1).Type = _
+        xlConditionValueLowestValue
+    With Selection.FormatConditions(1).ColorScaleCriteria(1).FormatColor
+        .Color = 16776444
+        .TintAndShade = 0
+    End With
+    Selection.FormatConditions(1).ColorScaleCriteria(2).Type = _
+        xlConditionValueHighestValue
+    With Selection.FormatConditions(1).ColorScaleCriteria(2).FormatColor
+        .Color = 8109667
+        .TintAndShade = 0
+    End With
+    Selection.NumberFormat = "0"
+    
+    Range("B2").Select
+    Selection.Cut
+    Range("A2").Select
+    ActiveSheet.Paste
+    Columns("B:M").Select
+    Columns("B:M").EntireColumn.AutoFit
+    Columns("O:O").Select
+    Columns("O:O").EntireColumn.AutoFit
+    Range("A2").Select
+    Selection.Cut
+    Range("B2").Select
+    ActiveSheet.Paste
+    
+    Range("A1").Select
+Exit Sub
+    
+NoBUFound:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("No unattached disks were found for " & BUName & ".", vbOKOnly)
+    End If
+    Sheets(SheetName).Visible = False
+    Range("A1").Select
+Exit Sub
+    
+WrongSheet:
+    If DebugMode = True Then
+        msg = MsgBox("You cannot run the Azure Unattached Disks macro in this sheet.", vbOKOnly)
+    End If
+    Range("A1").Select
+End Sub
+
+Sub Azure_Unused_IP_Addresses(Optional ByVal BUName As String, Optional ByVal SwitchSheet As Boolean)
+'
+' Azure_Unused_IP_Addresses Macro
+'
+
+'
+    Dim SheetName As String
+    If IsMissing(SwitchSheet) = False And SwitchSheet = True Then
+        Sheets("Unused IP Addresses").Select
+        Range("B6").Value = BUName
+    Else
+        Application.ScreenUpdating = False
+        Call Refresh_Data_Connection
+        BUName = Range("B6").Value
+    End If
+    SheetName = ActiveSheet.Name
+    If SheetName <> "Unused IP Addresses" Then GoTo WrongSheet
+    
+    ActiveSheet.ListObjects(1).AutoFilter.ShowAllData
+    If Not ActiveSheet.ListObjects(1).DataBodyRange Is Nothing Then
+            ActiveSheet.ListObjects(1).DataBodyRange.Delete
+    End If
+    
+    Sheets(PowerBISheetName).Select
+    ActiveSheet.PivotTables("Automation Dashboard").ClearTable
+    With ActiveSheet.PivotTables("Automation Dashboard")
+        .ColumnGrand = False
+        .RowGrand = False
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").RowAxisLayout xlTabularRow
+    ActiveSheet.PivotTables("Automation Dashboard").RepeatAllLabels xlRepeatLabels
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[IP Address Name]")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[IP Address]")
+        .Orientation = xlRowField
+        .Position = 2
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[Allocation Method]")
+        .Orientation = xlRowField
+        .Position = 3
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[Subscription Name]")
+        .Orientation = xlRowField
+        .Position = 4
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[Resource Group Name]")
+        .Orientation = xlRowField
+        .Position = 5
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[Last Modified]")
+        .Orientation = xlRowField
+        .Position = 6
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[Deployment]")
+        .Orientation = xlRowField
+        .Position = 7
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[Is Active?]")
+        .Orientation = xlRowField
+        .Position = 8
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[Is Derived?]")
+        .Orientation = xlRowField
+        .Position = 9
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[Tags]")
+        .Orientation = xlRowField
+        .Position = 10
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[cost]")
+        .Orientation = xlRowField
+        .Position = 11
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure IP Addresses].[Business Unit]")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    
+    On Error GoTo NoBUFound
+    Range("B1").Select
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = True
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[Azure IP Addresses].[Business Unit].[Business Unit]").ClearAllFilters
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[Azure IP Addresses].[Business Unit].[Business Unit]").CurrentPageName = "[Azure IP Addresses].[Business Unit].&[" & BUName & "]"
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = False
+    
+    ActiveSheet.PivotTables("Automation Dashboard").TableRange1.Select
+    Selection.Offset(1, 0).Select
+    Selection.Resize(Selection.Rows.Count - 1, Selection.Columns.Count).Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("B8").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    
+    Range("C6").Select
+    ActiveCell.FormulaR1C1 = "1"
+    Range("C6").Select
+    Selection.Copy
+    ActiveSheet.ListObjects(1).ListColumns("Cost").DataBodyRange.Select
+    Selection.PasteSpecial Paste:=xlPasteAll, Operation:=xlMultiply, _
+        SkipBlanks:=False, Transpose:=False
+    Range("C6").Select
+    Selection.ClearContents
+    
+    ActiveSheet.ListObjects(1).ListColumns("Cost").DataBodyRange.Select
+    Selection.NumberFormat = "_($* #,##0_);_($* (#,##0);_($* ""-""_);_(@_)"
+    
+    Range("G:G").Select
+    Selection.Replace What:=" UTC", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False, FormulaVersion:=xlReplaceFormula2
+        
+    With ActiveSheet.ListObjects(1).Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=.Parent.ListColumns("Cost").DataBodyRange, SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    
+    ActiveSheet.ListObjects(1).ListColumns("Cost").DataBodyRange.Select
+    Selection.FormatConditions.AddColorScale ColorScaleType:=2
+    Selection.FormatConditions(Selection.FormatConditions.Count).SetFirstPriority
+    Selection.FormatConditions(1).ColorScaleCriteria(1).Type = _
+        xlConditionValueLowestValue
+    With Selection.FormatConditions(1).ColorScaleCriteria(1).FormatColor
+        .Color = 16776444
+        .TintAndShade = 0
+    End With
+    Selection.FormatConditions(1).ColorScaleCriteria(2).Type = _
+        xlConditionValueHighestValue
+    With Selection.FormatConditions(1).ColorScaleCriteria(2).FormatColor
+        .Color = 8109667
+        .TintAndShade = 0
+    End With
+    Selection.NumberFormat = "0"
+    
+    Range("B2").Select
+    Selection.Cut
+    Range("A2").Select
+    ActiveSheet.Paste
+    Columns("B:J").Select
+    Columns("B:J").EntireColumn.AutoFit
+    Columns("L:L").Select
+    Columns("L:L").EntireColumn.AutoFit
+    Range("A2").Select
+    Selection.Cut
+    Range("B2").Select
+    ActiveSheet.Paste
+    
+    Range("A1").Select
+Exit Sub
+    
+NoBUFound:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("No unused IP addresses were found for " & BUName & ".", vbOKOnly)
+    End If
+    Sheets(SheetName).Visible = False
+    Range("A1").Select
+Exit Sub
+    
+WrongSheet:
+    If DebugMode = True Then
+        msg = MsgBox("You cannot run the Azure Unused IP Addresses macro in this sheet.", vbOKOnly)
+    End If
+    Range("A1").Select
+End Sub
+
+Sub Azure_Unused_App_Service_Plans(Optional ByVal BUName As String, Optional ByVal SwitchSheet As Boolean)
+'
+' Azure_Unused_App_Service_Plans Macro
+'
+
+'
+    Dim SheetName As String
+    If IsMissing(SwitchSheet) = False And SwitchSheet = True Then
+        Sheets("Unused App Plans").Select
+        Range("B6").Value = BUName
+    Else
+        Application.ScreenUpdating = False
+        Call Refresh_Data_Connection
+        BUName = Range("B6").Value
+    End If
+    SheetName = ActiveSheet.Name
+    If SheetName <> "Unused App Plans" Then GoTo WrongSheet
+    
+    ActiveSheet.ListObjects(1).AutoFilter.ShowAllData
+    If Not ActiveSheet.ListObjects(1).DataBodyRange Is Nothing Then
+            ActiveSheet.ListObjects(1).DataBodyRange.Delete
+    End If
+    
+    Sheets(PowerBISheetName).Select
+    ActiveSheet.PivotTables("Automation Dashboard").ClearTable
+    With ActiveSheet.PivotTables("Automation Dashboard")
+        .ColumnGrand = False
+        .RowGrand = False
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").RowAxisLayout xlTabularRow
+    ActiveSheet.PivotTables("Automation Dashboard").RepeatAllLabels xlRepeatLabels
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[App Service Plan]")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[Status]")
+        .Orientation = xlRowField
+        .Position = 2
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[Max Workers]")
+        .Orientation = xlRowField
+        .Position = 3
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[Subscription Name]")
+        .Orientation = xlRowField
+        .Position = 4
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[Resource Group Name]")
+        .Orientation = xlRowField
+        .Position = 5
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[Active?]")
+        .Orientation = xlRowField
+        .Position = 6
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[Derived?]")
+        .Orientation = xlRowField
+        .Position = 7
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[Last Modified]")
+        .Orientation = xlRowField
+        .Position = 8
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[Tags]")
+        .Orientation = xlRowField
+        .Position = 9
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[cost]")
+        .Orientation = xlRowField
+        .Position = 10
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[Azure App Plans].[Business Unit]")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    
+    On Error GoTo NoBUFound
+    Range("B1").Select
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = True
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[Azure App Plans].[Business Unit].[Business Unit]").ClearAllFilters
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[Azure App Plans].[Business Unit].[Business Unit]").CurrentPageName = "[Azure App Plans].[Business Unit].&[" & BUName & "]"
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = False
+    
+    ActiveSheet.PivotTables("Automation Dashboard").TableRange1.Select
+    Selection.Offset(1, 0).Select
+    Selection.Resize(Selection.Rows.Count - 1, Selection.Columns.Count).Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("B8").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+
+    Range("I:I").Select
+    Selection.Replace What:=" UTC", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False, FormulaVersion:=xlReplaceFormula2
+    
+    Range("C6").Select
+    ActiveCell.FormulaR1C1 = "1"
+    Range("C6").Select
+    Selection.Copy
+    ActiveSheet.ListObjects(1).ListColumns("Max Workers").DataBodyRange.Select
+    Selection.PasteSpecial Paste:=xlPasteAll, Operation:=xlMultiply, _
+        SkipBlanks:=False, Transpose:=False
+    ActiveSheet.ListObjects(1).ListColumns("Cost").DataBodyRange.Select
+    Selection.PasteSpecial Paste:=xlPasteAll, Operation:=xlMultiply, _
+        SkipBlanks:=False, Transpose:=False
+    Range("C6").Select
+    Selection.ClearContents
+    
+    ActiveSheet.ListObjects(1).ListColumns("Cost").DataBodyRange.Select
+    Selection.NumberFormat = "_($* #,##0_);_($* (#,##0);_($* ""-""_);_(@_)"
+    
+    With ActiveSheet.ListObjects(1).Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=.Parent.ListColumns("Cost").DataBodyRange, SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    
+    ActiveSheet.ListObjects(1).ListColumns("Cost").DataBodyRange.Select
+    Selection.FormatConditions.AddColorScale ColorScaleType:=2
+    Selection.FormatConditions(Selection.FormatConditions.Count).SetFirstPriority
+    Selection.FormatConditions(1).ColorScaleCriteria(1).Type = _
+        xlConditionValueLowestValue
+    With Selection.FormatConditions(1).ColorScaleCriteria(1).FormatColor
+        .Color = 16776444
+        .TintAndShade = 0
+    End With
+    Selection.FormatConditions(1).ColorScaleCriteria(2).Type = _
+        xlConditionValueHighestValue
+    With Selection.FormatConditions(1).ColorScaleCriteria(2).FormatColor
+        .Color = 8109667
+        .TintAndShade = 0
+    End With
+    Selection.NumberFormat = "0"
+    
+    Range("B2").Select
+    Selection.Cut
+    Range("A2").Select
+    ActiveSheet.Paste
+    Columns("B:I").Select
+    Columns("B:I").EntireColumn.AutoFit
+    Columns("K:K").Select
+    Columns("K:K").EntireColumn.AutoFit
+    Range("A2").Select
+    Selection.Cut
+    Range("B2").Select
+    ActiveSheet.Paste
+    
+    Range("A1").Select
+Exit Sub
+    
+NoBUFound:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("No unused app service plans were found for " & BUName & ".", vbOKOnly)
+    End If
+    Sheets(SheetName).Visible = False
+    Range("A1").Select
+Exit Sub
+    
+WrongSheet:
+    If DebugMode = True Then
+        msg = MsgBox("You cannot run the Azure Unused Azure App Service Plans macro in this sheet.", vbOKOnly)
+    End If
+    Range("A1").Select
+End Sub
+
+Sub Duplicate_CloudTrails(Optional ByVal BUName As String, Optional ByVal SwitchSheet As Boolean)
+'
+' Duplicate_CloudTrails Macro
+'
+    Dim SheetName As String
+    If IsMissing(SwitchSheet) = False And SwitchSheet = True Then
+        Sheets("Duplicate CloudTrails").Select
+        Range("B6").Value = BUName
+    Else
+        Application.ScreenUpdating = False
+        Call Refresh_Data_Connection
+        BUName = Range("B6").Value
+    End If
+    SheetName = ActiveSheet.Name
+    If SheetName <> "Duplicate CloudTrails" Then GoTo WrongSheet
+    
+    ActiveSheet.ListObjects(1).AutoFilter.ShowAllData
+    If Not ActiveSheet.ListObjects(1).DataBodyRange Is Nothing Then
+            ActiveSheet.ListObjects(1).DataBodyRange.Delete
+    End If
+    
+    Sheets(PowerBISheetName).Select
+    ActiveSheet.PivotTables("Automation Dashboard").ClearTable
+    With ActiveSheet.PivotTables("Automation Dashboard")
+        .ColumnGrand = False
+        .RowGrand = False
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").RowAxisLayout xlTabularRow
+    ActiveSheet.PivotTables("Automation Dashboard").RepeatAllLabels xlRepeatLabels
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[Account Name]")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[Name]")
+        .Orientation = xlRowField
+        .Position = 2
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[Home Region]")
+        .Orientation = xlRowField
+        .Position = 3
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[Trail ARN]")
+        .Orientation = xlRowField
+        .Position = 4
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[S3 Bucket Name]")
+        .Orientation = xlRowField
+        .Position = 5
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[Is Multi-Region Trail]")
+        .Orientation = xlRowField
+        .Position = 6
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[Tags]")
+        .Orientation = xlRowField
+        .Position = 7
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[CloudWatch Logs Role ARN]")
+        .Orientation = xlRowField
+        .Position = 8
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[Log File Validation Enabled]")
+        .Orientation = xlRowField
+        .Position = 9
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS CloudTrails].[Business Unit]")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    
+    On Error GoTo NoBUFound
+    Range("B1").Select
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = True
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[AWS CloudTrails].[Business Unit].[Business Unit]").ClearAllFilters
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[AWS CloudTrails].[Business Unit].[Business Unit]").CurrentPageName = "[AWS CloudTrails].[Business Unit].&[" & BUName & "]"
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = False
+    
+    ActiveSheet.PivotTables("Automation Dashboard").TableRange1.Select
+    Selection.Offset(1, 0).Select
+    Selection.Resize(Selection.Rows.Count - 1, Selection.Columns.Count).Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("B8").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+        
+    Sheets(PowerBISheetName).Select
+    ActiveSheet.PivotTables("Automation Dashboard").ClearTable
+    ActiveSheet.PivotTables("Automation Dashboard").AddDataField ActiveSheet. _
+        PivotTables("Automation Dashboard").CubeFields( _
+        "[Measures].[Current Month Spend]")
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Change Delta].[Business Unit]")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[AWS Change Delta].[Services_ServiceItemDescription]")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[AWS Change Delta].[Business Unit].[Business Unit]").ClearAllFilters
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[AWS Change Delta].[Business Unit].[Business Unit]").CurrentPageName = "[AWS Change Delta].[Business Unit].&[" & BUName & "]"
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[AWS Change Delta].[Services_ServiceItemDescription].[Services_ServiceItemDescription]").VisibleItemsList = Array("[AWS Change Delta].[Services_ServiceItemDescription].&[AWS CloudTrail]")
+    
+    Range("B4").Select
+    Selection.Copy
+    Sheets(SheetName).Select
+    Range("C4").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+        
+    ActiveSheet.ListObjects(1).ListColumns("Account Name").DataBodyRange.Select
+    Selection.FormatConditions.AddUniqueValues
+    Selection.FormatConditions(Selection.FormatConditions.Count).SetFirstPriority
+    Selection.FormatConditions(1).DupeUnique = xlDuplicate
+    With Selection.FormatConditions(1).Font
+        .Color = -16383844
+        .TintAndShade = 0
+    End With
+    With Selection.FormatConditions(1).Interior
+        .PatternColorIndex = xlAutomatic
+        .Color = 13551615
+        .TintAndShade = 0
+    End With
+    Selection.FormatConditions(1).StopIfTrue = False
+    ActiveSheet.ListObjects(1).Range.AutoFilter Field:=1, Criteria1:=RGB _
+        (255, 199, 206), Operator:=xlFilterCellColor
+    Selection.FormatConditions.Delete
+    
+    Range("B2").Select
+    Selection.Cut
+    Range("A2").Select
+    ActiveSheet.Paste
+    Columns("B:D").Select
+    Columns("B:D").EntireColumn.AutoFit
+    Columns("F:G").Select
+    Columns("F:G").EntireColumn.AutoFit
+    Columns("I:J").Select
+    Columns("I:J").EntireColumn.AutoFit
+    Range("A2").Select
+    Selection.Cut
+    Range("B2").Select
+    ActiveSheet.Paste
+    
+    ActiveSheet.ListObjects(1).DataBodyRange.Select
+    Selection.SpecialCells(xlCellTypeVisible).Select
+    If IsEmpty(Selection) = True Then
+        If DebugMode = True Then
+            msg = MsgBox("No cloudtrails were found for " & BUName & ".", vbOKOnly)
+        End If
+        Sheets(SheetName).Visible = False
+    Else
+        Range("A1").Select
+    End If
+Exit Sub
+    
+NoBUFound:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("No cloudtrails were found for " & BUName & ".", vbOKOnly)
+    End If
+    Sheets(SheetName).Visible = False
+    Range("A1").Select
+Exit Sub
+    
+WrongSheet:
+    If DebugMode = True Then
+        msg = MsgBox("You cannot run the Duplicate CloudTrails macro in this sheet.", vbOKOnly)
+    End If
+    Range("A1").Select
+End Sub
+
+Sub Refresh_Data_Connection()
+'
+' Refresh_Data_Connection Macro
+'
+    Sheets(PowerBISheetName).PivotTables(1).RefreshTable
+
+End Sub
+
+Sub Clean_Up_Final_Product()
+'
+' Clean_Up_Final_Product Macro
+'
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Dim WorkSheetCount As Integer
+    Dim I As Integer
+    Dim SheetName As String
+    Dim Conn As WorkbookConnection
+    Dim HiddenSheet As Boolean
+    
+    For Each Conn In ActiveWorkbook.Connections
+        Conn.Delete
+    Next Conn
+
+    Sheets(HomePageSheetName).Delete
+    Sheets(PowerBISheetName).Delete
+    Sheets(FlexOrgSheetName).Delete
+    
+    WorkSheetCount = ActiveWorkbook.Worksheets.Count
+
+    For I = 1 To WorkSheetCount
+        If Sheets(I).Visible = False Then HiddenSheet = True Else HiddenSheet = False
+        Sheets(I).Visible = True
+        Sheets(I).Select
+        SheetName = ActiveSheet.Name
+        ActiveSheet.Cells.Validation.Delete
+        If SheetName Like "*Cost Summary*" Then
+            Range("B4").Select
+            Selection.ClearContents
+        Else
+            Range("B6").Select
+            Selection.ClearContents
+        End If
+        ActiveSheet.Buttons.Delete
+        If HiddenSheet = True Then Sheets(I).Visible = False
+    Next I
+    
+    Sheets(1).Select
+    Range("A1").Select
+    
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+End Sub
+
+Function Business_Unit_List(ByVal CloudName As String, ByVal BUName As String) As Boolean
+'
+' Business_Unit_List Macro
+'
+    On Error GoTo NoBUFound
+    
+    Dim CloudTableName As String
+    Dim SheetName As String
+    SheetName = ActiveSheet.Name
+    
+    If CloudName = "AWS" Then
+        CloudTableName = "AWS Account"
+    ElseIf CloudName = "Azure" Then
+        CloudTableName = "Azure Subscription"
+    End If
+
+    Sheets(PowerBISheetName).Select
+    ActiveSheet.PivotTables("Automation Dashboard").ClearTable
+    With ActiveSheet.PivotTables("Automation Dashboard")
+        .ColumnGrand = False
+        .RowGrand = False
+    End With
+    ActiveSheet.PivotTables("Automation Dashboard").RowAxisLayout xlTabularRow
+    ActiveSheet.PivotTables("Automation Dashboard").RepeatAllLabels xlRepeatLabels
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[" & CloudTableName & " Business Unit Mapping].[Business Unit]")
+        .Orientation = xlRowField
+        .Position = 1
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[" & CloudTableName & " Business Unit Mapping].[CloudHealthFlexOrg]")
+        .Orientation = xlRowField
+        .Position = 2
+    End With
+    With ActiveSheet.PivotTables("Automation Dashboard").CubeFields( _
+        "[" & CloudTableName & " Business Unit Mapping].[MasterBU]")
+        .Orientation = xlPageField
+        .Position = 1
+    End With
+    
+    Range("B1").Select
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = True
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[" & CloudTableName & " Business Unit Mapping].[MasterBU].[MasterBU]").ClearAllFilters
+    ActiveSheet.PivotTables("Automation Dashboard").PivotFields("[" & CloudTableName & " Business Unit Mapping].[MasterBU].[MasterBU]").CurrentPageName = "[" & CloudTableName & " Business Unit Mapping].[MasterBU].&[" & BUName & "]"
+    ActiveSheet.PivotTables("Automation Dashboard").ManualUpdate = False
+    
+    Business_Unit_List = True
+Exit Function
+NoBUFound:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("No " & CloudName & " data was found for " & BUName & ".", vbOKOnly)
+    End If
+    Range("A1").Select
+    Business_Unit_List = False
+End Function
+
+Sub Run_All_Macros()
+'
+' Run_All_Macros Macro
+'
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Dim BUName As String
+    Dim SheetName As String
+    Dim CurrentRow As String
+    Dim CurrentFlexOrgName As String
+    Dim SheetExists As Boolean
+    SheetName = ActiveSheet.Name
+    If SheetName <> HomePageSheetName Then GoTo WrongSheet
+    BUName = Range("E6").Value
+    DebugMode = Range("E8").Value
+    For Each ws In Sheets
+        ws.Visible = True
+    Next ws
+    On Error GoTo NoBUFound
+    
+    
+    Call Refresh_Data_Connection
+    
+    If Business_Unit_List("AWS", BUName) <> False Then
+        CurrentRow = "4"
+        Range("B" & CurrentRow).Select
+        CurrentFlexOrgName = Selection.Value
+        
+        Do
+            Call AWS_Cost_Summary(CurrentFlexOrgName, True)
+            Call Business_Unit_List("AWS", BUName)
+            If Application.WorksheetFunction.CountA(Range("A:A")) > 3 Then
+                SheetExists = False
+                For Each ws In ThisWorkbook.Worksheets
+                    If ws.Name = CurrentFlexOrgName & " AWS Cost Summary" Then
+                        SheetExists = True
+                        Exit For
+                    End If
+                Next ws
+                If SheetExists = False Then
+                    Sheets("AWS Cost Summary").Select
+                    ActiveSheet.Name = CurrentFlexOrgName & " AWS Cost Summary"
+                    ActiveSheet.Copy Before:=Sheets("Unattached Volumes")
+                    ActiveSheet.Name = "AWS Cost Summary"
+                End If
+            End If
+            Sheets(PowerBISheetName).Select
+            CurrentRow = CurrentRow + 1
+            Range("B" & CurrentRow).Select
+            CurrentFlexOrgName = Selection.Value
+        Loop While Selection.Value <> ""
+        If CurrentRow > 5 Then
+            For Each ws In ThisWorkbook.Worksheets
+                If ws.Name = "AWS Cost Summary" And ws.Visible = True Then
+                    Sheets("AWS Cost Summary").Visible = False
+                    Exit For
+                End If
+            Next ws
+        End If
+        
+        Call AWS_Unattached_Volumes(BUName, True)
+        Call Duplicate_CloudTrails(BUName, True)
+    End If
+    
+    
+    If Business_Unit_List("Azure", BUName) <> False Then
+        CurrentRow = "4"
+        Range("B" & CurrentRow).Select
+        CurrentFlexOrgName = Selection.Value
+        
+        Do
+            Call Azure_Cost_Summary(CurrentFlexOrgName, True)
+            Call Business_Unit_List("Azure", BUName)
+            If Application.WorksheetFunction.CountA(Range("A:A")) > 3 Then
+                SheetExists = False
+                For Each ws In ThisWorkbook.Worksheets
+                    If ws.Name = CurrentFlexOrgName & " Azure Cost Summary" Then
+                        SheetExists = True
+                        Exit For
+                    End If
+                Next ws
+                If SheetExists = False Then
+                    Sheets("Azure Cost Summary").Select
+                    ActiveSheet.Name = CurrentFlexOrgName & " Azure Cost Summary"
+                    ActiveSheet.Copy Before:=Sheets("Azure Unattached Disks")
+                    ActiveSheet.Name = "Azure Cost Summary"
+                End If
+            End If
+            Sheets(PowerBISheetName).Select
+            CurrentRow = CurrentRow + 1
+            Range("B" & CurrentRow).Select
+            CurrentFlexOrgName = Selection.Value
+        Loop While Selection.Value <> ""
+        If CurrentRow > 5 Then
+            For Each ws In ThisWorkbook.Worksheets
+                If ws.Name = "Azure Cost Summary" And ws.Visible = True Then
+                    Sheets("Azure Cost Summary").Visible = False
+                    Exit For
+                End If
+            Next ws
+        End If
+        
+        Call Azure_Unattached_Disks(BUName, True)
+        Call Azure_Unused_IP_Addresses(BUName, True)
+        Call Azure_Unused_App_Service_Plans(BUName, True)
+    End If
+    
+    Sheets(SheetName).Select
+    Range("A1").Select
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+Exit Sub
+    
+NoBUFound:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("No data was found for " & BUName & ".", vbOKOnly)
+    End If
+    Range("A1").Select
+    Application.ScreenUpdating = True
+Exit Sub
+    
+WrongSheet:
+    Sheets(SheetName).Select
+    If DebugMode = True Then
+        msg = MsgBox("You cannot run the Run All Macros macro in this sheet.", vbOKOnly)
+    End If
+    Range("A1").Select
+    Application.ScreenUpdating = True
+End Sub
